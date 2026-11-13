@@ -1,0 +1,38 @@
+{
+  "pluginAlias": "BalluSyncleo",
+  "pluginType": "platform",
+  "singular": true,
+  "customUi": true,
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "title": "Name",
+        "default": "Ballu ASP-100"
+      },
+      "shareLink": {
+        "type": "string",
+        "title": "HOMMYN share link"
+      },
+      "devices": {
+        "title": "Breezers",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "title": "Name",
+              "default": "Ballu ASP-100"
+            },
+            "shareLink": {
+              "type": "string",
+              "title": "HOMMYN share link"
+            }
+          }
+        }
+      }
+    }
+  }
+}

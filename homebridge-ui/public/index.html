@@ -1,0 +1,111 @@
+<div class="d-flex justify-content-end mb-3">
+  <label class="visually-hidden" for="language">Language / Язык</label>
+  <select class="form-select w-auto" id="language">
+    <option value="en">English</option>
+    <option value="ru">Русский</option>
+  </select>
+</div>
+<form id="settings">
+  <div id="devices"></div>
+  <p class="form-text" id="linkHelp"></p>
+  <button type="button" id="add" class="btn btn-outline-primary me-2"></button>
+  <button type="submit" id="save" class="btn btn-primary"></button>
+  <p id="status" class="mt-3" role="status"></p>
+</form>
+<script>
+(async () => {
+  const strings = {
+    en: {
+      name: 'Accessory name', link: 'HOMMYN share link',
+      help: 'In HOMMYN, open the breezer settings → Access control → Share. Paste the full link. It contains a token and is stored in the Homebridge configuration.',
+      add: 'Add breezer', remove: 'Remove', duplicate: 'Each breezer can be added once.', save: 'Save settings', invalid: 'Paste a valid HOMMYN share link for the Ballu ASP-100.',
+      saved: 'Settings saved. An active Ballu platform applies changes automatically. If the platform is not running yet, restart Homebridge once.', failure: 'Could not save settings.'
+    },
+    ru: {
+      name: 'Имя аксессуара', link: 'Ссылка «Поделиться» из HOMMYN',
+      help: 'В HOMMYN откройте настройки бризера → Управление доступом → Поделиться. Вставьте ссылку целиком. Она содержит токен и хранится в конфигурации Homebridge.',
+      add: 'Добавить бризер', remove: 'Удалить', duplicate: 'Каждый бризер можно добавить один раз.', save: 'Сохранить настройки', invalid: 'Вставьте ссылку HOMMYN для Ballu ASP-100.',
+      saved: 'Настройки сохранены. Запущенная платформа Ballu применит изменения автоматически. Если платформа ещё не запущена, один раз перезапустите Homebridge.', failure: 'Не удалось сохранить настройки.'
+    }
+  };
+  const field = id => document.getElementById(id);
+  const language = field('language');
+  const status = field('status');
+  const save = field('save');
+  const t = () => strings[language.value];
+  function translate() {
+    document.documentElement.lang = language.value;
+    document.querySelectorAll('[data-label]').forEach(element => {
+      element.textContent = t()[element.dataset.label];
+    });
+    field('linkHelp').textContent = t().help;
+    field('add').textContent = t().add;
+    save.textContent = t().save;
+    status.textContent = '';
+  }
+  let nextRow = 0;
+  function addDevice(device = {}) {
+    const row = document.createElement('fieldset');
+    row.className = 'border rounded p-3 mb-3';
+    const id = nextRow++;
+    row.innerHTML = `
+      <label class="form-label" data-label="name" for="device-name-${id}"></label>
+      <input class="form-control mb-2" id="device-name-${id}" data-name maxlength="64" placeholder="Ballu ASP-100">
+      <label class="form-label" data-label="link" for="device-link-${id}"></label>
+      <input class="form-control mb-2" id="device-link-${id}" data-link type="password" required autocomplete="off" spellcheck="false" aria-describedby="linkHelp">
+      <button type="button" class="btn btn-outline-secondary btn-sm" data-label="remove"></button>`;
+    row.querySelector('[data-name]').value = device.name || '';
+    row.querySelector('[data-link]').value = device.shareLink || '';
+    row.querySelector('button').addEventListener('click', () => row.remove());
+    field('devices').append(row);
+    translate();
+    return row;
+  }
+  homebridge.disableSaveButton();
+  language.value = (await homebridge.i18nCurrentLang()).startsWith('ru') ? 'ru' : 'en';
+  language.addEventListener('change', translate);
+  translate();
+  let config = (await homebridge.getPluginConfig())[0] || { platform: 'BalluSyncleo' };
+  const initial = Array.isArray(config.devices) ? config.devices : config.shareLink ? [config] : [{}];
+  initial.forEach(addDevice);
+  field('add').addEventListener('click', () => addDevice().querySelector('input').focus());
+  field('settings').addEventListener('submit', async event => {
+    event.preventDefault();
+    const devices = Array.from(field('devices').children, row => ({
+      name: row.querySelector('[data-name]').value.trim() || 'Ballu ASP-100',
+      shareLink: row.querySelector('[data-link]').value.trim()
+    }));
+    const addresses = new Set();
+    try {
+      for (const { shareLink } of devices) {
+      const url = new URL(shareLink);
+      const token = url.searchParams.get('token') || '';
+      if (url.protocol !== 'rusklimat:' || url.hostname !== 'device-share' ||
+          !/^\/rusclimate\/69\/([0-9a-f]{12}|(?:[0-9a-f]{2}:){5}[0-9a-f]{2})\/?$/i.test(url.pathname) ||
+          !/^[0-9a-f]{32}$/i.test(token) || /^0+$/.test(token)) throw new Error();
+      const mac = url.pathname.split('/')[3].replace(/:/g, '').toLowerCase();
+      if (addresses.has(mac)) {
+        status.textContent = t().duplicate;
+        return;
+      }
+      addresses.add(mac);
+      }
+    } catch {
+      status.textContent = t().invalid;
+      return;
+    }
+    save.disabled = true;
+    try {
+      config = { ...config, devices };
+      delete config.shareLink;
+      await homebridge.updatePluginConfig([config]);
+      await homebridge.savePluginConfig();
+      status.textContent = t().saved;
+    } catch {
+      status.textContent = t().failure;
+    } finally {
+      save.disabled = false;
+    }
+  });
+})();
+</script>
