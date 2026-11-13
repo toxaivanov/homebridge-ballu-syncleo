@@ -18,7 +18,7 @@ npm ci
 npm pack
 ```
 
-Установите полученный архив в каталог npm, который использует ваш Homebridge. Для глобальной установки Homebridge выполните `npm install -g ./homebridge-ballu-syncleo-0.1.3.tgz`. Для официального Docker-образа скопируйте архив в примонтированную папку данных Homebridge и выполните `npm install ./homebridge-ballu-syncleo-0.1.3.tgz` из этой папки внутри контейнера.
+Установите полученный архив в каталог npm, который использует ваш Homebridge. Для глобальной установки Homebridge выполните `npm install -g ./homebridge-ballu-syncleo-0.1.4.tgz`. Для официального Docker-образа скопируйте архив в примонтированную папку данных Homebridge и выполните `npm install ./homebridge-ballu-syncleo-0.1.4.tgz` из этой папки внутри контейнера.
 
 ## Настройка
 
