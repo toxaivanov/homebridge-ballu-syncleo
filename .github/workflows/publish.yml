@@ -1,0 +1,40 @@
+name: Publish to npm
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version in package.json to publish
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.repository == 'toxaivanov/homebridge-ballu-syncleo' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - name: Verify release version
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          node -e 'if (require("./package.json").version !== process.env.RELEASE_VERSION) throw new Error("Version must match package.json")'
+      - run: npm ci --ignore-scripts
+      - run: npm publish --access public
